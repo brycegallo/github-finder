@@ -10,10 +10,33 @@ export const GithubProvider = ({ children }) => {
     const initialState = {
         users: [],
         user: {},
+        repos: [],
         loading: false
     }
 
     const [state, dispatch] = useReducer(githubReducer, initialState)
+
+    // get search results
+    const searchUsers = async (text) => {
+        setLoading()
+
+        const params = new URLSearchParams({
+            q: text
+        })
+
+        const response = await fetch(`${GITHUB_URL}/search/users?${params}`, {
+            headers: {
+                Authorization: `Bearer ${GITHUB_TOKEN}`,
+            },
+        })
+
+        const { items } = await response.json()
+
+        dispatch({
+            type: 'GET_USERS',
+            payload: items,
+        })
+    }
 
     // get a single user
     const getUser = async (login) => {
@@ -37,25 +60,26 @@ export const GithubProvider = ({ children }) => {
         }
     }
 
-    // get users
-    const searchUsers = async (text) => {
+    // get user repos
+    const getUserRepos = async (login) => {
         setLoading()
 
         const params = new URLSearchParams({
-            q: text
+            sort: 'created',
+            per_page: 10
         })
 
-        const response = await fetch(`${GITHUB_URL}/search/users?${params}`, {
+        const response = await fetch(`${GITHUB_URL}/users/${login}/repos?${params}`, {
             headers: {
                 Authorization: `Bearer ${GITHUB_TOKEN}`,
             },
         })
 
-        const { items } = await response.json()
+        const data = await response.json()
 
         dispatch({
-            type: 'GET_USERS',
-            payload: items,
+            type: 'GET_REPOS',
+            payload: data,
         })
     }
 
@@ -68,10 +92,12 @@ export const GithubProvider = ({ children }) => {
     return <GithubContext.Provider value={{
         users: state.users,
         user: state.user,
+        repos: state.repos,
         loading: state.loading,
         searchUsers,
         clearUsers,
         getUser,
+        getUserRepos,
     }}>
         {children}
     </GithubContext.Provider>
